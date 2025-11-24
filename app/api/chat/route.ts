@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { analyzeEmotion, analyzeConversationContext, generateEmotionSummaryPrompt } from '../../utils/emotionDetection'
 
 // Empathy System Prompt
 const SYSTEM_PROMPT = `你是一位溫暖、善解人意的情感陪伴夥伴。你的角色是提供即時的情緒疏導與支持。
@@ -33,6 +34,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Message is required' }, { status: 400 })
     }
 
+    // Analyze emotion in current message
+    const currentEmotion = analyzeEmotion(message)
+
+    // Analyze conversation context for patterns
+    const userMessages = context.filter((msg: Message) => msg.type === 'user').map((msg: Message) => msg.text)
+    userMessages.push(message)
+    const contextEmotion = analyzeConversationContext(userMessages)
+
     // Build conversation history for context
     const messages = [
       { role: 'system', content: SYSTEM_PROMPT },
@@ -43,7 +52,7 @@ export async function POST(req: NextRequest) {
       { role: 'user', content: message }
     ]
 
-    // Call OpenRouter API
+    // Call OpenRouter API for empathy response
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -71,7 +80,41 @@ export async function POST(req: NextRequest) {
     const data = await response.json()
     const aiMessage = data.choices[0]?.message?.content || '抱歉，我現在無法回應。'
 
-    return NextResponse.json({ message: aiMessage })
+    // Generate emotion summary if triggered
+    let emotionSummary = null
+    if (contextEmotion.shouldTrigger) {
+      const summaryPrompt = generateEmotionSummaryPrompt(contextEmotion, userMessages)
+
+      const summaryResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': process.env.SITE_URL || 'http://localhost:3000',
+          'X-Title': 'HeartLook AI Chatbot'
+        },
+        body: JSON.stringify({
+          model: process.env.OPENROUTER_MODEL || 'deepseek/deepseek-chat-v3-0324',
+          messages: [{ role: 'user', content: summaryPrompt }],
+          max_tokens: 120,
+          temperature: 0.5,
+        })
+      })
+
+      if (summaryResponse.ok) {
+        const summaryData = await summaryResponse.json()
+        emotionSummary = summaryData.choices[0]?.message?.content || null
+      }
+    }
+
+    return NextResponse.json({
+      message: aiMessage,
+      emotion: {
+        current: currentEmotion,
+        context: contextEmotion,
+        summary: emotionSummary
+      }
+    })
 
   } catch (error) {
     console.error('Chat API error:', error)

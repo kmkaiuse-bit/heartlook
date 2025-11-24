@@ -8,11 +8,29 @@ type Message = {
   timestamp: string
 }
 
+type EmotionData = {
+  score: number
+  level: 'low' | 'medium' | 'high' | 'critical'
+  keywords: string[]
+  category: string
+  shouldTrigger: boolean
+}
+
+type ReferralCard = {
+  id: string
+  type: 'therapist' | 'workshop' | 'summary'
+  visible: boolean
+}
+
 export default function Home() {
   const [currentView, setCurrentView] = useState<'landing' | 'chat'>('landing')
   const [messages, setMessages] = useState<Message[]>([])
   const [inputValue, setInputValue] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [emotionSummary, setEmotionSummary] = useState<string | null>(null)
+  const [currentEmotion, setCurrentEmotion] = useState<EmotionData | null>(null)
+  const [showReferralCard, setShowReferralCard] = useState(false)
+  const [referralTriggered, setReferralTriggered] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const scrollToBottom = () => {
@@ -62,6 +80,22 @@ export default function Home() {
         addMessage('bot', '抱歉，現在無法回應，讓我們重試')
       } else {
         addMessage('bot', data.message)
+
+        // Handle emotion detection
+        if (data.emotion) {
+          setCurrentEmotion(data.emotion.context)
+
+          // Show referral card if emotion threshold triggered (only once per session)
+          if (data.emotion.context.shouldTrigger && !referralTriggered) {
+            setShowReferralCard(true)
+            setReferralTriggered(true)
+
+            // Show emotion summary if available
+            if (data.emotion.summary) {
+              setEmotionSummary(data.emotion.summary)
+            }
+          }
+        }
       }
     } catch (error) {
       addMessage('bot', '抱歉，現在無法回應，讓我們重試')
@@ -208,34 +242,73 @@ export default function Home() {
       <div className="hidden lg:block w-1/3 bg-white p-6 overflow-y-auto" style={{ borderLeft: '1px solid #E2E8F0' }}>
         <h3 className="text-lg font-medium text-primary mb-6">建議與資源</h3>
 
-        {/* Therapist Profile Card */}
-        <div className="referral-card mb-5">
-          <div className="flex items-center mb-4">
-            <div className="w-14 h-14 rounded-full mr-3 flex items-center justify-center" style={{ background: 'rgba(37, 99, 235, 0.1)' }}>
-              <span className="font-semibold text-lg" style={{ color: '#2563EB' }}>李</span>
+        {/* Emotion Summary Card - Shows when triggered */}
+        {emotionSummary && (
+          <div className="referral-card mb-5 animate-fadeIn" style={{ background: 'rgba(37, 99, 235, 0.08)', borderColor: '#2563EB', borderWidth: '2px' }}>
+            <div className="flex items-center mb-3">
+              <span className="text-2xl mr-2">💙</span>
+              <h4 className="text-primary font-medium">情緒洞察</h4>
             </div>
-            <div>
-              <h4 className="text-primary font-medium">李心怡 諮商師</h4>
-              <p className="text-sm text-secondary">情緒管理專家</p>
-            </div>
+            <p className="text-sm text-primary leading-relaxed mb-4">{emotionSummary}</p>
+            {currentEmotion && (
+              <div className="flex gap-2 flex-wrap">
+                <span className="insight-badge">強度: {currentEmotion.level}</span>
+                <span className="insight-badge">類別: {currentEmotion.category}</span>
+              </div>
+            )}
           </div>
-          <p className="text-sm text-primary mb-5 leading-relaxed">10年臨床經驗，專精焦慮與壓力管理</p>
-          <button className="btn-primary w-full">預約諮詢</button>
-        </div>
+        )}
 
-        {/* Workshop Card */}
-        <div className="referral-card mb-5">
-          <h4 className="text-primary font-medium mb-2">情緒療癒工作坊</h4>
-          <p className="text-sm text-primary mb-3 leading-relaxed">學習正念與放鬆技巧</p>
-          <span className="insight-badge mb-4 inline-block">📅 12/15 週六 14:00-17:00</span>
-          <button className="btn-primary w-full mt-2">立即報名</button>
-        </div>
+        {/* Therapist Profile Card - Shows when referral triggered */}
+        {showReferralCard && (
+          <div className="referral-card mb-5 animate-fadeIn">
+            <div className="flex items-center mb-4">
+              <div className="w-14 h-14 rounded-full mr-3 flex items-center justify-center" style={{ background: 'rgba(37, 99, 235, 0.1)' }}>
+                <span className="font-semibold text-lg" style={{ color: '#2563EB' }}>李</span>
+              </div>
+              <div>
+                <h4 className="text-primary font-medium">李心怡 諮商師</h4>
+                <p className="text-sm text-secondary">情緒管理專家</p>
+              </div>
+            </div>
+            <p className="text-sm text-primary mb-5 leading-relaxed">10年臨床經驗，專精焦慮與壓力管理。我可以幫助你更好地理解和處理這些情緒。</p>
+            <button
+              onClick={() => window.open('https://calendar.google.com', '_blank')}
+              className="btn-primary w-full"
+            >
+              預約諮詢
+            </button>
+            <button
+              onClick={() => setShowReferralCard(false)}
+              className="text-sm text-secondary hover:text-primary mt-3 w-full text-center"
+            >
+              暫時不需要
+            </button>
+          </div>
+        )}
 
-        {/* Emotion Summary Card */}
-        <div className="referral-card" style={{ background: 'rgba(37, 99, 235, 0.04)', borderColor: '#2563EB' }}>
-          <h4 className="text-primary font-medium mb-3">今日情緒摘要</h4>
-          <p className="text-sm text-primary leading-relaxed">對話進行中，我會幫你整理情緒重點...</p>
-        </div>
+        {/* Workshop Card - Shows when referral triggered */}
+        {showReferralCard && (
+          <div className="referral-card mb-5 animate-fadeIn">
+            <h4 className="text-primary font-medium mb-2">情緒療癒工作坊</h4>
+            <p className="text-sm text-primary mb-3 leading-relaxed">學習正念與放鬆技巧，與他人分享經驗</p>
+            <span className="insight-badge mb-4 inline-block">📅 12/15 週六 14:00-17:00</span>
+            <button
+              onClick={() => window.open('https://example.com/workshop', '_blank')}
+              className="btn-primary w-full mt-2"
+            >
+              立即報名
+            </button>
+          </div>
+        )}
+
+        {/* Default Info Card - Shows when no referral */}
+        {!showReferralCard && !emotionSummary && (
+          <div className="referral-card" style={{ background: 'rgba(37, 99, 235, 0.04)', borderColor: '#E2E8F0' }}>
+            <h4 className="text-primary font-medium mb-3">陪你聊心情</h4>
+            <p className="text-sm text-primary leading-relaxed">我會傾聽你的感受，在需要時提供專業資源建議。</p>
+          </div>
+        )}
       </div>
     </div>
   )
