@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 情感陪伴 Chatbot POC</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        // 簡單的狀態管理邏輯
+        let state = {
+            currentView: 'landing', // 'landing', 'chat', 'modal', 'post'
+            messages: [], // 儲存聊天消息 [{type: 'user' or 'bot', text: '', timestamp: ''}]
+            context: [], // 簡單上下文記憶，前5輪對話
+            emotionKeywords: [], // 情緒關鍵詞追蹤
+            sessionActive: false
+        };
+
+        // 基本的交互事件處理
+        function showView(view) {
+            document.querySelectorAll('[data-view]').forEach(el => el.classList.add('hidden'));
+            document.querySelector(`[data-view="${view}"]`).classList.remove('hidden');
+            state.currentView = view;
+            console.log('View changed to:', view);
+        }
+
+        function addMessage(type, text) {
+            const timestamp = new Date().toLocaleTimeString();
+            state.messages.push({type, text, timestamp});
+            if (state.context.length >= 5) state.context.shift(); // 限制上下文長度
+            state.context.push({type, text});
+            renderMessages();
+            console.log('Message added:', {type, text});
+            
+            if (type === 'user') {
+                checkForTriggers(text);
+                simulateBotResponse(text);
+            }
+        }
+
+        function renderMessages() {
+            const chatArea = document.getElementById('chat-messages');
+            chatArea.innerHTML = state.messages.map(msg =>
+                `<div class="flex ${msg.type === 'user' ? 'justify-end' : 'justify-start'}">
+                    <div class="max-w-md">
+                        <div class="${msg.type === 'user' ? 'message-user' : 'message-ai'}">
+                            ${msg.text}
+                        </div>
+                        <div class="text-xs text-gray-500 mt-1.5 px-2">${msg.timestamp}</div>
+                    </div>
+                </div>`
+            ).join('');
+            chatArea.scrollTop = chatArea.scrollHeight;
+        }
+
+        function checkForTriggers(text) {
+            const triggers = ['崩潰', '自殺', '絕望', '幫助', '崩潰了'];
+            const found = triggers.filter(word => text.includes(word));
+            if (found.length > 0) {
+                state.emotionKeywords.push(...found);
+                console.log('Trigger detected:', found);
+                showEmotionModal(text);
+            }
+        }
+
+        function simulateBotResponse(userText) {
+            // 簡單模擬 AI 共情回應，基於上下文
+            let response = '我聽起來你今天真的很辛苦，我在這裡陪你聊聊。';
+            if (state.context.some(msg => msg.text.includes('失戀'))) {
+                response = '關於失戀，我能感受到你的難過。給自己一點時間，好嗎？';
+            } else if (state.context.some(msg => msg.text.includes('工作'))) {
+                response = '工作壓力大是常事，我們一步步來解壓吧。';
+            }
+            // 延遲模擬 <3秒 回應
+            setTimeout(() => {
+                addMessage('bot', response);
+            }, 1000);
+        }
+
+        function showEmotionModal(summary) {
+            document.getElementById('emotion-summary').textContent = `從對話中，我感受到你的壓力來源是... ${summary.substring(0, 50)}... 考慮預約諮詢師嗎？`;
+            showView('modal');
+        }
+
+        function resetSession() {
+            state.messages = [];
+            state.context = [];
+            state.emotionKeywords = [];
+            document.getElementById('chat-messages').innerHTML = '';
+            document.getElementById('user-input').value = '';
+            state.sessionActive = false;
+            console.log('Session reset');
+        }
+
+        function endSession() {
+            showView('post');
+            console.log('Session ended');
+        }
+
+        // 事件綁定在 DOM 加載後
+        document.addEventListener('DOMContentLoaded', function() {
+            // 快速開始
+            document.getElementById('start-chat').addEventListener('click', () => {
+                showView('chat');
+                state.sessionActive = true;
+                addMessage('bot', '歡迎！我是你的情感夥伴，有什麼想分享的嗎？');
+                console.log('Chat started');
+            });
+
+            // 發送消息
+            document.getElementById('send-btn').addEventListener('click', () => {
+                const input = document.getElementById('user-input');
+                const text = input.value.trim();
+                if (text && state.sessionActive) {
+                    addMessage('user', text);
+                    input.value = '';
+                }
+            });
+
+            // Enter 鍵發送
+            document.getElementById('user-input').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    document.getElementById('send-btn').click();
+                }
+            });
+
+            // 重置會話
+            document.getElementById('reset-btn').addEventListener('click', resetSession);
+
+            // 關閉模態
+            document.getElementById('close-modal').addEventListener('click', () => showView('chat'));
+
+            // 導流 CTA (模擬連結)
+            document.getElementById('cta-btn').addEventListener('click', () => {
+                console.log('導流點擊：預約諮詢');
+                alert('導向預約頁面 (模擬)');
+                showView('chat');
+            });
+
+            // 結束會話
+            document.getElementById('end-chat').addEventListener('click', endSession);
+
+            // Quick Reply 按鈕
+            document.querySelectorAll('.quick-reply').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const text = e.target.textContent;
+                    if (state.sessionActive) {
+                        addMessage('user', text);
+                    }
+                });
+            });
+
+            console.log('Prototype initialized');
+        });
+    </script>
+</head>
+<style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+        /* Global Styles for Clean Light Mode */
+        body {
+            background-color: #F9FAFB; /* Very soft gray background */
+            color: #111827; /* Dark slate text */
+            font-family: 'Inter', system-ui, sans-serif; /* Clean sans-serif */
+        }
+
+        /* The Chat Container - Paper Card look */
+        .chat-container {
+            background: #FFFFFF;
+            border: 1px solid #E5E7EB; /* Light gray border */
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); /* Very subtle shadow */
+        }
+
+        /* Message Bubble - User */
+        .message-user {
+            background-color: #F3F4F6; /* Light gray bubble */
+            color: #111827;
+            border-radius: 6px;
+            padding: 12px;
+        }
+
+        /* Message Bubble - AI */
+        .message-ai {
+            background-color: #FFFFFF;
+            border: 1px solid #E5E7EB;
+            border-left: 3px solid #2563EB; /* Blue accent line on the left */
+            color: #374151;
+            border-radius: 6px;
+            padding: 12px;
+        }
+
+        /* Referral Card (The MVP Feature) */
+        .referral-card {
+            background: #FFFFFF;
+            border: 1px solid #E2E8F0;
+            padding: 16px;
+            border-radius: 8px;
+        }
+
+        /* Action Button */
+        .btn-primary {
+            background-color: #0F172A; /* Dark slate button for contrast */
+            color: #FFFFFF;
+            border-radius: 4px;
+            padding: 8px 16px;
+            font-weight: 500;
+        }
+        .btn-primary:hover {
+            background-color: #334155;
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+    <!-- 入口頁 (Landing Page) -->
+    <div id="landing" data-view="landing" class="container mx-auto px-4 py-16 text-center">
+        <h1 class="text-5xl font-bold text-gray-900 mb-6 tracking-tight">隨時有我在，陪你聊聊心情</h1>
+        <p class="text-xl text-gray-600 mb-12 max-w-2xl mx-auto">AI 情感陪伴 Chatbot，提供溫暖的傾聽與支持</p>
+        <!-- 註釋：歡迎標語與核心介紹，強調共情價值 -->
+        <button id="start-chat" class="btn-primary px-10 py-4 text-xl font-semibold mb-6 shadow-sm transition-all duration-200 hover:shadow-md">快速開始聊天</button>
+        <!-- 註釋：快速開始按鈕，跳轉至聊天視窗 -->
+        <div class="mt-8">
+            <a href="#" class="text-blue-600 hover:text-blue-700 transition-colors">隱私政策</a> |
+            <a href="#" class="text-blue-600 hover:text-blue-700 transition-colors">註冊帳號 (Nice to Have)</a>
+            <!-- 註釋：隱私政策連結與註冊選項，符合隱私需求 -->
+        </div>
+        <!-- 註釋：入口頁聚焦簡單易用，移動優先設計 -->
+        <p class="text-sm text-gray-500 mt-12">您的對話匿名且不儲存。我們不是專業診斷替代品。</p>
+        <!-- 註釋：隱私通知與免責聲明，非功能需求 -->
+    </div>
+
+    <!-- 聊天主頁 (Chat Interface) -->
+    <div id="chat" data-view="chat" class="hidden lg:flex h-screen bg-gray-50">
+        <!-- Left: Chat Interface -->
+        <div class="flex flex-col w-full lg:w-2/3 chat-container">
+            <!-- 頂部：角色介紹與會話標題 -->
+            <div class="bg-white border-b border-gray-200 p-5 flex justify-between items-center">
+                <h2 class="text-xl font-semibold text-gray-900">我是你的情感夥伴</h2>
+                <button id="end-chat" class="text-gray-500 hover:text-gray-700 transition-colors text-sm font-medium">結束</button>
+                <!-- 註釋：頂部區域，包含角色介紹與結束按鈕 -->
+            </div>
+
+            <!-- 中間：聊天泡泡區 -->
+            <div id="chat-messages" class="flex-1 overflow-y-auto p-6 space-y-4 bg-gray-50">
+                <!-- 註釋：歷史訊息顯示，滾動視窗，限20輪 (這裡用 JS 動態渲染) -->
+            </div>
+
+            <!-- Quick Reply Chips -->
+            <div class="px-6 pb-3 bg-white flex gap-2 flex-wrap border-t border-gray-100 pt-3">
+                <button class="quick-reply bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded text-sm transition-colors border border-gray-200">我很焦慮</button>
+                <button class="quick-reply bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded text-sm transition-colors border border-gray-200">只是想聊聊</button>
+                <button class="quick-reply bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded text-sm transition-colors border border-gray-200">感到壓力</button>
+            </div>
+
+            <!-- 用戶輸入框 -->
+            <div class="p-4 bg-white border-t border-gray-200">
+                <div class="flex gap-2">
+                    <input id="user-input" type="text" placeholder="分享你的心情..." class="flex-1 p-3 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 placeholder-gray-500">
+                    <button id="send-btn" class="btn-primary px-6">發送</button>
+                    <!-- 註釋：文字輸入/輸出，支持發送按鈕與 Enter 鍵 -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: Wellness/Action Panel -->
+        <div class="hidden lg:block w-1/3 bg-white border-l border-gray-200 p-6 overflow-y-auto">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">建議與資源</h3>
+
+            <!-- Therapist Profile Card 1 -->
+            <div class="referral-card mb-4 shadow-sm">
+                <div class="flex items-center mb-3">
+                    <div class="w-12 h-12 bg-blue-100 rounded-full mr-3 flex items-center justify-center">
+                        <span class="text-blue-600 font-semibold text-lg">李</span>
+                    </div>
+                    <div>
+                        <h4 class="text-gray-900 font-semibold">李心怡 諮商師</h4>
+                        <p class="text-sm text-gray-600">情緒管理專家</p>
+                    </div>
+                </div>
+                <p class="text-sm text-gray-700 mb-4">10年臨床經驗，專精焦慮與壓力管理</p>
+                <button class="btn-primary w-full">預約諮詢</button>
+            </div>
+
+            <!-- Workshop Card -->
+            <div class="referral-card mb-4 shadow-sm">
+                <h4 class="text-gray-900 font-semibold mb-2">情緒療癒工作坊</h4>
+                <p class="text-sm text-gray-700 mb-3">學習正念與放鬆技巧</p>
+                <p class="text-xs text-gray-500 mb-4">📅 12/15 週六 14:00-17:00</p>
+                <button class="btn-primary w-full">立即報名</button>
+            </div>
+
+            <!-- Emotion Summary Card -->
+            <div class="referral-card shadow-sm bg-blue-50 border-blue-100">
+                <h4 class="text-gray-900 font-semibold mb-2">今日情緒摘要</h4>
+                <p class="text-sm text-gray-700">對話進行中，我會幫你整理情緒重點...</p>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- 側邊抽屜 (模擬，Nice to Have) -->
+    <!-- 註釋：用戶設定與情緒歷史，註冊後解鎖；這裡簡化為註釋 -->
+
+    <!-- 導流頁 (Modal) -->
+    <div id="modal" data-view="modal" class="hidden fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+        <div class="bg-white p-8 rounded-lg max-w-md w-full mx-4 border border-gray-200 shadow-xl">
+            <h3 class="text-2xl font-semibold mb-4 text-gray-900">情緒摘要</h3>
+            <p id="emotion-summary" class="text-gray-700 mb-6 leading-relaxed"></p>
+            <!-- 註釋：摘要顯示，基於對話生成 <100字 -->
+            <div class="flex gap-3">
+                <button id="cta-btn" class="flex-1 btn-primary px-6 py-3 font-semibold">立即預約</button>
+                <button id="close-modal" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 px-6 py-3 rounded font-semibold transition-colors border border-gray-300">關閉</button>
+                <!-- 註釋：行動 CTA 連結外部，關閉返回聊天 -->
+            </div>
+        </div>
+        <!-- 註釋：導流模態，觸發於關鍵詞，實現無縫轉移 -->
+    </div>
+
+    <!-- 後續頁 (Post-Session) -->
+    <div id="post" data-view="post" class="hidden container mx-auto px-4 py-16 text-center">
+        <h2 class="text-3xl font-bold text-gray-900 mb-4">謝謝分享，記得照顧自己</h2>
+        <p class="text-lg text-gray-600 mb-10 max-w-xl mx-auto">希望這次聊天有幫助你。下次需要時，我還在這裡。</p>
+        <!-- 註釋：感謝頁，維持黏性 -->
+        <button onclick="showView('landing')" class="btn-primary px-10 py-4 text-lg font-semibold shadow-sm hover:shadow-md transition-all duration-200">返回首頁</button>
+        <div class="mt-8">
+            <a href="#" class="text-blue-600 hover:text-blue-700 transition-colors">訂閱郵件更新</a> | <a href="#" class="text-blue-600 hover:text-blue-700 transition-colors">下載 App (Nice to Have)</a>
+            <!-- 註釋：郵件訂閱或 App 提示，導流至資源 -->
+        </div>
+        <!-- 註釋：會話結束跟進，建議下次使用 -->
+    </div>
+
+    <!-- 註釋區塊：測試清單 -->
+    <!--
+    測試清單：
+    1. 入口頁：點擊"快速開始聊天" 是否跳轉至聊天視窗，並顯示歡迎消息。
+    2. 聊天交互：輸入消息並發送，檢查用戶/機器人泡泡顯示、時間戳、滾動。
+    3. 上下文記憶：輸入"我失戀了"，後續消息是否參考（如工作壓力測試無影響）。
+    4. 關鍵詞導流：輸入含"崩潰"的消息，檢查模態是否彈出，摘要顯示正確。
+    5. 重置會話：點擊重置，確認消息清空，控制台 log "Session reset"。
+    6. 結束會話：點擊結束，跳轉後續頁。
+    7. 模態交互：點擊預約 CTA，檢查 alert 與返回聊天。
+    8. Enter 鍵發送：輸入框按 Enter 是否發送。
+    9. 移動適應：縮小瀏覽器視窗，檢查響應式佈局。
+    10. 控制台調試：開啟 DevTools，觀察 log 如 "Message added" 或 "Trigger detected"。
+    -->
+
+    <!-- 註釋區塊：使用建議 -->
+    <!--
+    使用建議：
+    1. 直接將此 HTML 保存為 .html 文件，在瀏覽器（如 Chrome）中打開。
+    2. 開啟開發者工具 (F12)，切換至 Console 標籤觀察 log 輸出。
+    3. 測試不同場景：日常聊天、觸發詞（如"我快崩潰了"）、重置與結束。
+    4. 無需後端，AI 回應為模擬；未來整合 OpenAI API 替換 simulateBotResponse。
+    5. 檢查 Tailwind 樣式是否載入，若無 CDN，可下載 Tailwind CSS。
+    -->
+
+    <!-- 註釋區塊：改進建議 -->
+    <!--
+    改進建議：
+    1. 整合真實 AI：替換 simulateBotResponse 為 OpenAI API 呼叫，使用系統提示確保共情。
+    2. Supabase 整合：添加 Supabase JS SDK，於 addMessage 時 insert 到 sessions 表，應用 RLS。
+    3. 進階 SPA：使用 React/Vue 替換純 JS，提升狀態管理與組件化。
+    4. 多模態：添加 Web Speech API 支援語音輸入/輸出 (Nice to Have)。
+    5. 無障礙：添加 ARIA 屬性，如 role="dialog" 於模態，確保 WCAG 合規。
+    6. 效能優化：限 messages 長度，避免滾動卡頓；添加載入 spinner 於 AI 延遲。
+    7. 導流追蹤：於 CTA 點擊時，使用 lead_flows 表記錄，未來 A/B 測試文案。
+    8. 錯誤處理：添加 try-catch 於事件，優雅降級如 "AI 暫不可用，請稍後"。
+    9. 雙語支持：添加 lang 切換，動態翻譯消息。
+    10. 安全：生產環境使用 HTTPS，驗證輸入防 XSS。
+    -->
+</body>
+</html>

@@ -1,0 +1,178 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Medical & Clean Design System - "Apple Health meets Notion" */
+
+/* Color Palette */
+:root {
+  --bg-primary: #FFFFFF;
+  --bg-secondary: #F8F9FA;
+  --surface-white: #FFFFFF;
+  --border-light: #E2E8F0;
+  --text-primary: #1A202C;
+  --text-secondary: #64748B;
+  --accent-trust: #2563EB;
+  --accent-action: #059669;
+  --user-message-bg: #F1F5F9;
+}
+
+/* Global Styles */
+body {
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+  font-weight: 400;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Chat Container - Clean white surface */
+.chat-container {
+  background: var(--surface-white);
+  border-right: 1px solid var(--border-light);
+}
+
+/* Message Bubble - User */
+.message-user {
+  background-color: var(--user-message-bg);
+  color: var(--text-primary);
+  border: 1px solid var(--border-light);
+  border-radius: 4px;
+  padding: 14px 16px;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+/* Message Bubble - AI with blue sidebar indicator */
+.message-ai {
+  background-color: var(--surface-white);
+  border: 1px solid var(--border-light);
+  border-left: 3px solid var(--accent-trust);
+  color: var(--text-primary);
+  border-radius: 4px;
+  padding: 14px 16px;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+/* Referral/Insight Card - Medical report style */
+.referral-card {
+  background: var(--surface-white);
+  border: 1px solid var(--border-light);
+  padding: 20px;
+  border-radius: 4px;
+  transition: border-color 0.15s ease;
+}
+
+.referral-card:hover {
+  border-color: var(--accent-trust);
+}
+
+/* Action Button - Emerald Green for referrals */
+.btn-primary {
+  background-color: var(--accent-action);
+  color: #FFFFFF;
+  border: none;
+  border-radius: 4px;
+  padding: 10px 20px;
+  font-weight: 500;
+  font-size: 15px;
+  transition: all 0.15s ease;
+  cursor: pointer;
+}
+
+.btn-primary:hover {
+  background-color: #047857;
+  transform: translateY(-1px);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+/* Secondary Button - Royal Blue for trust/AI actions */
+.btn-secondary {
+  background-color: var(--accent-trust);
+  color: #FFFFFF;
+  border: none;
+  border-radius: 4px;
+  padding: 10px 20px;
+  font-weight: 500;
+  font-size: 15px;
+  transition: all 0.15s ease;
+  cursor: pointer;
+}
+
+.btn-secondary:hover {
+  background-color: #1e40af;
+  transform: translateY(-1px);
+}
+
+/* Quick Reply Chips - Professional tags */
+.quick-reply-chip {
+  background: var(--surface-white);
+  border: 1px solid var(--border-light);
+  color: var(--text-primary);
+  border-radius: 4px;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.15s ease;
+  cursor: pointer;
+}
+
+.quick-reply-chip:hover {
+  border-color: var(--accent-trust);
+  background-color: var(--bg-secondary);
+}
+
+/* Input Field - Clean and bordered */
+.input-field {
+  border: 1px solid var(--border-light);
+  background: var(--surface-white);
+  color: var(--text-primary);
+  border-radius: 4px;
+  padding: 12px 16px;
+  font-size: 15px;
+  transition: border-color 0.15s ease;
+}
+
+.input-field:focus {
+  outline: none;
+  border-color: var(--accent-trust);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.input-field::placeholder {
+  color: var(--text-secondary);
+}
+
+/* Panel Header - Sharp dividers */
+.panel-header {
+  border-bottom: 1px solid var(--border-light);
+  padding: 16px 20px;
+  background: var(--surface-white);
+}
+
+/* Text Utilities */
+.text-secondary {
+  color: var(--text-secondary);
+}
+
+.text-primary {
+  color: var(--text-primary);
+}
+
+/* Insight Badge - Like medical ID card */
+.insight-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border: 1px solid var(--border-light);
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 500;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+}
